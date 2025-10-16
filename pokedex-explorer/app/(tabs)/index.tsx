@@ -1,98 +1,113 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  FlatList,
+  ActivityIndicator,
+  TextInput,
+  Button,
+  StyleSheet,
+} from "react-native";
+import { fetchPokemonPage, fetchPokemonByName } from "../api/pokeApi";
+import PokemonCard from "../components/PokemonCard"; // Adjusted the path to be relative
+import { useRouter } from "expo-router";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+export default function PokedexScreen() {
+  const router = useRouter();
+  const [pokemons, setPokemons] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [search, setSearch] = useState("");
+  const [error, setError] = useState("");
 
-export default function HomeScreen() {
+  const loadPokemons = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await fetchPokemonPage(offset);
+      setPokemons((prev) => [...prev, ...data.results]);
+    } catch {
+      setError("Erro ao carregar os Pokémon.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = async () => {
+    if (!search.trim()) return;
+    try {
+      const data = await fetchPokemonByName(search.trim());
+      router.push({ pathname: "details", params: { name: data.name } });
+    } catch {
+      setError("Pokémon não encontrado.");
+    }
+  };
+
+  useEffect(() => {
+    loadPokemons();
+  }, [offset]);
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <View style={styles.container}>
+      <Text style={styles.title}>Pokédex Explorer</Text>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      <View style={styles.searchRow}>
+        <TextInput
+          placeholder="Buscar Pokémon..."
+          value={search}
+          onChangeText={setSearch}
+          style={styles.input}
+        />
+        <Button title="Buscar" onPress={handleSearch} />
+      </View>
+
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+
+      {loading && pokemons.length === 0 ? (
+        <ActivityIndicator size="large" />
+      ) : (
+        <FlatList
+          data={pokemons}
+          keyExtractor={(item) => item.name}
+          numColumns={2}
+          renderItem={({ item }) => {
+            const id = item.url.split("/").filter(Boolean).pop();
+            const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
+            return (
+              <PokemonCard
+                name={item.name}
+                imageUrl={imageUrl}
+                onPress={() => router.push({ pathname: "details", params: { name: item.name } })}
+              />
+            );
+          }}
+          ListFooterComponent={
+            loading ? (
+              <ActivityIndicator />
+            ) : (
+              <Button title="Carregar Mais" onPress={() => setOffset(offset + 20)} />
+            )
+          }
+        />
+      )}
+
+      <View style={{ marginTop: 10 }}>
+        <Button title="Favoritos" onPress={() => router.push("favorites")} />
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: { flex: 1, padding: 10, backgroundColor: "white" },
+  title: { fontSize: 22, fontWeight: "bold", textAlign: "center", marginBottom: 10 },
+  searchRow: { flexDirection: "row", marginBottom: 10, gap: 5 },
+  input: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    padding: 8,
+    borderRadius: 5,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
+  error: { color: "red", textAlign: "center", marginBottom: 10 },
 });
