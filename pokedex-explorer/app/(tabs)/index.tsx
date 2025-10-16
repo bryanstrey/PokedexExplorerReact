@@ -9,7 +9,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { fetchPokemonPage, fetchPokemonByName } from "../api/pokeApi";
-import PokemonCard from "../components/PokemonCard"; // Adjusted the path to be relative
+import PokemonCard from "../../components/PokemonCard"; 
 import { useRouter } from "expo-router";
 
 export default function PokedexScreen() {
@@ -37,7 +37,7 @@ export default function PokedexScreen() {
     if (!search.trim()) return;
     try {
       const data = await fetchPokemonByName(search.trim());
-      router.push({ pathname: "details", params: { name: data.name } });
+      router.push({ pathname: "../details", params: { name: data.name } });
     } catch {
       setError("Pokémon não encontrado.");
     }
@@ -77,7 +77,7 @@ export default function PokedexScreen() {
               <PokemonCard
                 name={item.name}
                 imageUrl={imageUrl}
-                onPress={() => router.push({ pathname: "details", params: { name: item.name } })}
+                onPress={() => router.push({ pathname: "../details", params: { name: item.name } })}
               />
             );
           }}
@@ -92,7 +92,7 @@ export default function PokedexScreen() {
       )}
 
       <View style={{ marginTop: 10 }}>
-        <Button title="Favoritos" onPress={() => router.push("favorites")} />
+        <Button title="Favoritos" onPress={() => router.push("../favorites")} />
       </View>
     </View>
   );

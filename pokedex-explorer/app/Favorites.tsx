@@ -24,7 +24,7 @@ export default function FavoritesScreen() {
               <PokemonCard
                 name={item}
                 imageUrl={imageUrl}
-                onPress={() => router.push({ pathname: "details", params: { name: item } })}
+                onPress={() => router.push({ pathname: "../details", params: { name: item } })}
               />
             );
           }}
